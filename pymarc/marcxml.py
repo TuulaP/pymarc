@@ -18,6 +18,7 @@ XSI_NS = "http://www.w3.org/2001/XMLSchema-instance"
 MARC_XML_NS = "http://www.loc.gov/MARC21/slim"
 MARC_XML_SCHEMA = "http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
 
+
 class XmlHandler(ContentHandler):
 
     """
@@ -27,6 +28,7 @@ class XmlHandler(ContentHandler):
     records elsewhere (like to a rdbms) without having to store
     them all in memory.
     """
+
     def __init__(self, strict=False, normalize_form=None):
         self.records = []
         self._record = None
@@ -62,7 +64,8 @@ class XmlHandler(ContentHandler):
 
         element = name[1]
         if self.normalize_form is not None:
-            text = unicodedata.normalize(self.normalize_form, u''.join(self._text))
+            text = unicodedata.normalize(
+                self.normalize_form, u''.join(self._text))
         else:
             text = u''.join(self._text)
 
@@ -91,6 +94,7 @@ class XmlHandler(ContentHandler):
     def process_record(self, record):
         self.records.append(record)
 
+
 def parse_xml(xml_file, handler):
     """
     parse a file with a given subclass of xml.sax.handler.ContentHandler
@@ -99,6 +103,7 @@ def parse_xml(xml_file, handler):
     parser.setContentHandler(handler)
     parser.setFeature(feature_namespaces, 1)
     parser.parse(xml_file)
+
 
 def map_xml(function, *files):
     """
@@ -115,6 +120,7 @@ def map_xml(function, *files):
     for xml_file in files:
         parse_xml(xml_file, handler)
 
+
 def parse_xml_to_array(xml_file, strict=False, normalize_form=None):
     """
     parse an xml file and return the records as an array. If you would
@@ -127,45 +133,51 @@ def parse_xml_to_array(xml_file, strict=False, normalize_form=None):
     parse_xml(xml_file, handler)
     return handler.records
 
-def record_to_xml(record, quiet=False, namespace=False):
-    node = record_to_xml_node(record, quiet, namespace)
+
+def record_to_xml(record, quiet=False, namespace=False, prefix=''):
+    node = record_to_xml_node(record, quiet, namespace, prefix)
     return ET.tostring(node)
 
-def record_to_xml_node(record, quiet=False, namespace=False):
+
+def record_to_xml_node(record, quiet=False, namespace=False, prefix=''):
     """
     converts a record object to a chunk of xml
 
     # include the marcxml namespace in the root tag (default: False)
     record_to_xml(record, namespace=True)
+    prefix : experimental trick to add namespace prefix. Please do include :
+
     """
     # helper for converting non-unicode data to unicode
     # TODO: maybe should set g0 and g1 appropriately using 066 $a and $b?
+
     marc8 = MARC8ToUnicode(quiet=quiet)
+
     def translate(data):
         if type(data) == six.text_type:
             return data
         else:
             return marc8.translate(data)
 
-    root = ET.Element('record')
+    root = ET.Element(prefix + 'record')  # hmm.
     if namespace:
         root.set('xmlns', MARC_XML_NS)
         root.set('xmlns:xsi', XSI_NS)
         root.set('xsi:schemaLocation', MARC_XML_SCHEMA)
-    leader = ET.SubElement(root, 'leader')
+    leader = ET.SubElement(root, prefix + 'leader')
     leader.text = record.leader
     for field in record:
         if field.is_control_field():
-            control_field = ET.SubElement(root, 'controlfield')
+            control_field = ET.SubElement(root, prefix + 'controlfield')
             control_field.set('tag', field.tag)
             control_field.text = translate(field.data)
         else:
-            data_field = ET.SubElement(root, 'datafield')
+            data_field = ET.SubElement(root, prefix + 'datafield')
             data_field.set('tag', field.tag)
             data_field.set('ind1', field.indicators[0])
             data_field.set('ind2', field.indicators[1])
             for subfield in field:
-                data_subfield = ET.SubElement(data_field, 'subfield')
+                data_subfield = ET.SubElement(data_field, prefix + 'subfield')
                 data_subfield.set('code', subfield[0])
                 data_subfield.text = translate(subfield[1])
 
