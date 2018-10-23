@@ -58,6 +58,8 @@ by writing to the author.
 
 '''
 
+__version__ = '3.1.9.1'
+
 
 from .record import *
 from .field import *
@@ -71,4 +73,3 @@ from .marcxml import *
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-
